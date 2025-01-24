@@ -712,7 +712,7 @@ public enum MySqlType implements Type {
             case ID_VARCHAR:
             case ID_VAR_STRING:
             case ID_STRING:
-                return metadata.isBinary() ? VARBINARY : VARCHAR;
+                return metadata.isBinary() ? VARBINARY : (metadata.isMariaDbJson() ? JSON : VARCHAR);
             case ID_BIT:
                 return BIT;
             case ID_JSON:

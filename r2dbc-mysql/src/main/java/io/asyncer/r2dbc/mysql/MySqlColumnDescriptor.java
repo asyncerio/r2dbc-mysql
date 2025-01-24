@@ -23,6 +23,8 @@ import io.asyncer.r2dbc.mysql.collation.CharCollation;
 import io.asyncer.r2dbc.mysql.constant.MySqlType;
 import io.asyncer.r2dbc.mysql.message.server.DefinitionMetadataMessage;
 import io.r2dbc.spi.Nullability;
+
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 import static io.asyncer.r2dbc.mysql.internal.util.AssertUtils.require;
@@ -53,13 +55,13 @@ final class MySqlColumnDescriptor implements MySqlColumnMetadata {
 
     @VisibleForTesting
     MySqlColumnDescriptor(int index, short typeId, String name, int definitions,
-        long size, int decimals, int collationId) {
+        long size, int decimals, int collationId, @Nullable String extendedTypeInfo) {
         require(index >= 0, "index must not be a negative integer");
         require(size >= 0, "size must not be a negative integer");
         require(decimals >= 0, "decimals must not be a negative integer");
         requireNonNull(name, "name must not be null");
 
-        MySqlTypeMetadata typeMetadata = new MySqlTypeMetadata(typeId, definitions, collationId);
+        MySqlTypeMetadata typeMetadata = new MySqlTypeMetadata(typeId, definitions, collationId, extendedTypeInfo);
 
         this.index = index;
         this.typeMetadata = typeMetadata;
@@ -74,7 +76,7 @@ final class MySqlColumnDescriptor implements MySqlColumnMetadata {
     static MySqlColumnDescriptor create(int index, DefinitionMetadataMessage message) {
         int definitions = message.getDefinitions();
         return new MySqlColumnDescriptor(index, message.getTypeId(), message.getColumn(), definitions,
-            message.getSize(), message.getDecimals(), message.getCollationId());
+            message.getSize(), message.getDecimals(), message.getCollationId(), message.getExtendedTypeInfo());
     }
 
     int getIndex() {

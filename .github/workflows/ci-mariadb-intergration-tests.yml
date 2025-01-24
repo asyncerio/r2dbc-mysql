@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        mariadb-version: [ 10.0, 10.1, 10.2.15, 10.2, 10.3.7, 10.3, 10.5.1, 10.5, 10.6, 10.11]
+        mariadb-version: [ 10.0, 10.1, 10.2.15, 10.2, 10.3.7, 10.3, 10.5.1, 10.5, 10.6, 10.11 ]
     name: Integration test with MariaDB ${{ matrix.mariadb-version }}
     steps:
       - uses: actions/checkout@v3
