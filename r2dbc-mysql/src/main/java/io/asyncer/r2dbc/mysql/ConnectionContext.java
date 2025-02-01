@@ -51,6 +51,8 @@ public final class ConnectionContext implements CodecContext {
 
     private final int localInfileBufferSize;
 
+    private final boolean tinyInt1isBit;
+
     private final boolean preserveInstants;
 
     private int connectionId = -1;
@@ -107,12 +109,14 @@ public final class ConnectionContext implements CodecContext {
         ZeroDateOption zeroDateOption,
         @Nullable Path localInfilePath,
         int localInfileBufferSize,
+        boolean tinyInt1isBit,
         boolean preserveInstants,
         @Nullable ZoneId timeZone
     ) {
         this.zeroDateOption = requireNonNull(zeroDateOption, "zeroDateOption must not be null");
         this.localInfilePath = localInfilePath;
         this.localInfileBufferSize = localInfileBufferSize;
+        this.tinyInt1isBit = tinyInt1isBit;
         this.preserveInstants = preserveInstants;
         this.timeZone = timeZone;
     }
@@ -214,6 +218,11 @@ public final class ConnectionContext implements CodecContext {
     public boolean isMariaDb() {
         Capability capability = this.capability;
         return (capability != null && capability.isMariaDb()) || serverVersion.isMariaDb();
+    }
+
+    @Override
+    public boolean isTinyInt1isBit() {
+        return tinyInt1isBit;
     }
 
     public boolean isNoBackslashEscapes() {

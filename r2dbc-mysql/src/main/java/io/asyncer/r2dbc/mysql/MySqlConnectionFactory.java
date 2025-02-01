@@ -137,6 +137,7 @@ public final class MySqlConnectionFactory implements ConnectionFactory {
                 configuration.getZeroDateOption(),
                 configuration.getLoadLocalInfilePath(),
                 configuration.getLocalInfileBufferSize(),
+                configuration.isTinyInt1isBit(),
                 configuration.isPreserveInstants(),
                 connectionTimeZone
             );

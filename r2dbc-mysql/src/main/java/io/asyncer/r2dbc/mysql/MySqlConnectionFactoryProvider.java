@@ -330,6 +330,15 @@ public final class MySqlConnectionFactoryProvider implements ConnectionFactoryPr
      */
     public static final Option<Boolean> METRICS = Option.valueOf("metrics");
 
+    /**
+     * Option to whether the driver should interpret MySQL's TINYINT(1) as a BIT type.
+     * When enabled, TINYINT(1) columns (both SIGNED and UNSIGNED) will be treated as
+     * BIT. default to {@code true}.
+     *
+     * @since 1.4.0
+     */
+    public static final Option<Boolean> TINY_INT_1_IS_BIT = Option.valueOf("tinyInt1isBit");
+
     @Override
     public ConnectionFactory create(ConnectionFactoryOptions options) {
         requireNonNull(options, "connectionFactoryOptions must not be null");
@@ -424,7 +433,9 @@ public final class MySqlConnectionFactoryProvider implements ConnectionFactoryPr
         mapper.optional(STATEMENT_TIMEOUT).as(Duration.class, Duration::parse)
             .to(builder::statementTimeout);
         mapper.optional(METRICS).asBoolean()
-            .to(builder::metrics);
+                .to(builder::metrics);
+        mapper.optional(TINY_INT_1_IS_BIT).asBoolean()
+                .to(builder::tinyInt1isBit);
 
         return builder.build();
     }

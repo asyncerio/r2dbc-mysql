@@ -580,6 +580,31 @@ class ConnectionIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    public void tinyInt1isBitTrueTestValue1() {
+        complete(connection -> Mono.from(connection.createStatement("CREATE TEMPORARY TABLE `test` (`id` INT NOT NULL PRIMARY KEY, `value` TINYINT(1))").execute())
+            .flatMap(IntegrationTestSupport::extractRowsUpdated)
+            .thenMany(connection.createStatement("INSERT INTO `test` VALUES (1, 1)").execute())
+            .flatMap(IntegrationTestSupport::extractRowsUpdated)
+            .thenMany(connection.createStatement("SELECT `value` FROM `test`").execute())
+            .flatMap(result -> result.map((row, metadata) -> row.get("value", Object.class)))
+            .doOnNext(value -> assertThat(value).isInstanceOf(Boolean.class))
+            .doOnNext(value -> assertThat(value).isEqualTo(true))
+        );
+    }
+
+    @Test
+    public void tinyInt1isBitTrueTestValue0() {
+        complete(connection -> Mono.from(connection.createStatement("CREATE TEMPORARY TABLE `test` (`id` INT NOT NULL PRIMARY KEY, `value` TINYINT(1))").execute())
+            .flatMap(IntegrationTestSupport::extractRowsUpdated)
+            .thenMany(connection.createStatement("INSERT INTO `test` VALUES (1, 0)").execute())
+            .flatMap(IntegrationTestSupport::extractRowsUpdated)
+            .thenMany(connection.createStatement("SELECT `value` FROM `test`").execute())
+            .flatMap(result -> result.map((row, metadata) -> row.get("value", Object.class)))
+            .doOnNext(value -> assertThat(value).isInstanceOf(Boolean.class))
+            .doOnNext(value -> assertThat(value).isEqualTo(false)));
+    }
+
+    @Test
     void batchCrud() {
         // TODO: spilt it to multiple test cases and move it to BatchIntegrationTest
         String isEven = "id % 2 = 0";

@@ -134,24 +134,26 @@ public final class MySqlConnectionConfiguration {
 
     private final boolean metrics;
 
+    private final boolean tinyInt1isBit;
+
     private MySqlConnectionConfiguration(
-        boolean isHost, String domain, int port, MySqlSslConfiguration ssl,
-        boolean tcpKeepAlive, boolean tcpNoDelay, @Nullable Duration connectTimeout,
-        ZeroDateOption zeroDateOption,
-        boolean preserveInstants,
-        String connectionTimeZone,
-        boolean forceConnectionTimeZoneToSession,
-        String user, @Nullable CharSequence password, @Nullable String database,
-        boolean createDatabaseIfNotExist, @Nullable Predicate<String> preferPrepareStatement,
-        List<String> sessionVariables, @Nullable Duration lockWaitTimeout, @Nullable Duration statementTimeout,
-        @Nullable Path loadLocalInfilePath, int localInfileBufferSize,
-        int queryCacheSize, int prepareCacheSize,
-        Set<CompressionAlgorithm> compressionAlgorithms, int zstdCompressionLevel,
-        @Nullable LoopResources loopResources,
-        Extensions extensions, @Nullable Publisher<String> passwordPublisher,
-        @Nullable AddressResolverGroup<?> resolver,
-        boolean metrics
-    ) {
+            boolean isHost, String domain, int port, MySqlSslConfiguration ssl,
+            boolean tcpKeepAlive, boolean tcpNoDelay, @Nullable Duration connectTimeout,
+            ZeroDateOption zeroDateOption,
+            boolean preserveInstants,
+            String connectionTimeZone,
+            boolean forceConnectionTimeZoneToSession,
+            String user, @Nullable CharSequence password, @Nullable String database,
+            boolean createDatabaseIfNotExist, @Nullable Predicate<String> preferPrepareStatement,
+            List<String> sessionVariables, @Nullable Duration lockWaitTimeout, @Nullable Duration statementTimeout,
+            @Nullable Path loadLocalInfilePath, int localInfileBufferSize,
+            int queryCacheSize, int prepareCacheSize,
+            Set<CompressionAlgorithm> compressionAlgorithms, int zstdCompressionLevel,
+            @Nullable LoopResources loopResources,
+            Extensions extensions, @Nullable Publisher<String> passwordPublisher,
+            @Nullable AddressResolverGroup<?> resolver,
+            boolean metrics,
+            boolean tinyInt1isBit) {
         this.isHost = isHost;
         this.domain = domain;
         this.port = port;
@@ -182,6 +184,7 @@ public final class MySqlConnectionConfiguration {
         this.passwordPublisher = passwordPublisher;
         this.resolver = resolver;
         this.metrics = metrics;
+        this.tinyInt1isBit = tinyInt1isBit;
     }
 
     /**
@@ -321,6 +324,10 @@ public final class MySqlConnectionConfiguration {
         return metrics;
     }
 
+    boolean isTinyInt1isBit() {
+        return tinyInt1isBit;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -359,7 +366,8 @@ public final class MySqlConnectionConfiguration {
             extensions.equals(that.extensions) &&
             Objects.equals(passwordPublisher, that.passwordPublisher) &&
             Objects.equals(resolver, that.resolver) &&
-            metrics == that.metrics;
+            metrics == that.metrics &&
+            tinyInt1isBit == that.tinyInt1isBit;
     }
 
     @Override
@@ -374,7 +382,7 @@ public final class MySqlConnectionConfiguration {
             loadLocalInfilePath, localInfileBufferSize,
             queryCacheSize, prepareCacheSize,
             compressionAlgorithms, zstdCompressionLevel,
-            loopResources, extensions, passwordPublisher, resolver, metrics);
+            loopResources, extensions, passwordPublisher, resolver, metrics, tinyInt1isBit);
     }
 
     @Override
@@ -409,7 +417,8 @@ public final class MySqlConnectionConfiguration {
                 ", extensions=" + extensions +
                 ", passwordPublisher=" + passwordPublisher +
                 ", resolver=" + resolver +
-                ", metrics=" + metrics;
+                ", metrics=" + metrics +
+                ", tinyint1isBit=" + tinyInt1isBit;
     }
 
     /**
@@ -511,6 +520,8 @@ public final class MySqlConnectionConfiguration {
 
         private boolean metrics;
 
+        private boolean tinyInt1isBit = true;
+
         /**
          * Builds an immutable {@link MySqlConnectionConfiguration} with current options.
          *
@@ -545,11 +556,11 @@ public final class MySqlConnectionConfiguration {
                 loadLocalInfilePath,
                 localInfileBufferSize, queryCacheSize, prepareCacheSize,
                 compressionAlgorithms, zstdCompressionLevel, loopResources,
-                Extensions.from(extensions, autodetectExtensions), passwordPublisher, resolver, metrics);
+                Extensions.from(extensions, autodetectExtensions), passwordPublisher, resolver, metrics, tinyInt1isBit);
         }
 
         /**
-         * Configures the database.  Default no database.
+         * Configures the database. Default no database.
          *
          * @param database the database, or {@code null} if no database want to be login.
          * @return this {@link Builder}.
@@ -1204,6 +1215,20 @@ public final class MySqlConnectionConfiguration {
             "dependency `io.micrometer:micrometer-core` must be added to classpath if metrics enabled"
             );
             this.metrics = enabled;
+            return this;
+        }
+
+        /**
+         * Option to whether the driver should interpret MySQL's TINYINT(1) as a BIT type.
+         * When enabled, TINYINT(1) columns (both SIGNED and UNSIGNED) will be treated as
+         * BIT. default to {@code true}.
+         *
+         * @param tinyInt1isBit {@code true} to treat TINYINT(1) as BIT
+         * @return this {@link Builder}
+         * @since 1.4.0
+         */
+        public Builder tinyInt1isBit(boolean tinyInt1isBit) {
+            this.tinyInt1isBit = tinyInt1isBit;
             return this;
         }
 

@@ -69,4 +69,10 @@ public interface CodecContext {
      * @return if is MariaDB.
      */
     boolean isMariaDb();
+
+    /**
+     *
+     * @return true if tinyInt(1) is treated as bit.
+     */
+    boolean isTinyInt1isBit();
 }

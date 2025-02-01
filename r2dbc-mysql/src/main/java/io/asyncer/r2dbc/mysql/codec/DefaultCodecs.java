@@ -45,6 +45,8 @@ import static io.asyncer.r2dbc.mysql.internal.util.AssertUtils.requireNonNull;
  */
 final class DefaultCodecs implements Codecs {
 
+    private static final Integer INTEGER_ONE = Integer.valueOf(1);
+
     private static final List<Codec<?>> DEFAULT_CODECS = InternalArrays.asImmutableList(
         ByteCodec.INSTANCE,
         ShortCodec.INSTANCE,
@@ -137,6 +139,7 @@ final class DefaultCodecs implements Codecs {
      * Note: this method should NEVER release {@code buf} because of it come from {@code MySqlRow} which will release
      * this buffer.
      */
+    @Nullable
     @Override
     public <T> T decode(FieldValue value, MySqlReadableMetadata metadata, Class<?> type, boolean binary,
         CodecContext context) {
@@ -151,7 +154,7 @@ final class DefaultCodecs implements Codecs {
             return null;
         }
 
-        Class<?> target = chooseClass(metadata, type);
+        Class<?> target = chooseClass(metadata, type, context);
 
         if (value instanceof NormalFieldValue) {
             return decodeNormal((NormalFieldValue) value, metadata, target, binary, context);
@@ -162,6 +165,7 @@ final class DefaultCodecs implements Codecs {
         throw new IllegalArgumentException("Unknown value " + value.getClass().getSimpleName());
     }
 
+    @Nullable
     @Override
     public <T> T decode(FieldValue value, MySqlReadableMetadata metadata, ParameterizedType type,
         boolean binary, CodecContext context) {
@@ -359,18 +363,27 @@ final class DefaultCodecs implements Codecs {
      * @param type     the {@link Class} specified by the user.
      * @return the {@link Class} to use for decoding.
      */
-    private static Class<?> chooseClass(final MySqlReadableMetadata metadata, Class<?> type) {
-        final Class<?> javaType = getDefaultJavaType(metadata);
+    private static Class<?> chooseClass(final MySqlReadableMetadata metadata, Class<?> type,
+                                        final CodecContext codecContext) {
+        final Class<?> javaType = getDefaultJavaType(metadata, codecContext);
         return type.isAssignableFrom(javaType) ? javaType : type;
     }
 
-    private static Class<?> getDefaultJavaType(final MySqlReadableMetadata metadata) {
+    private static Class<?> getDefaultJavaType(final MySqlReadableMetadata metadata, final CodecContext codecContext) {
         final MySqlType type = metadata.getType();
-        // ref: https://github.com/asyncer-io/r2dbc-mysql/issues/277
-        // BIT(1) should be treated as Boolean by default.
-        if (type == MySqlType.BIT && Integer.valueOf(1).equals(metadata.getPrecision())) {
+        final Integer precision = metadata.getPrecision();
+
+        if (INTEGER_ONE.equals(precision) && (type == MySqlType.TINYINT || type == MySqlType.TINYINT_UNSIGNED)
+         && codecContext.isTinyInt1isBit()) {
             return Boolean.class;
         }
+
+        // ref: https://github.com/asyncer-io/r2dbc-mysql/issues/277
+        // BIT(1) should be treated as Boolean by default.
+        if (INTEGER_ONE.equals(precision) && type == MySqlType.BIT) {
+            return Boolean.class;
+        }
+
         return type.getJavaType();
     }
 
