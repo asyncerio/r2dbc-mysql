@@ -42,15 +42,49 @@ import static io.asyncer.r2dbc.mysql.internal.util.AssertUtils.requireNonNull;
  */
 public final class MySqlConnectionFactory implements ConnectionFactory {
 
-    private final Mono<? extends MySqlConnection> client;
+    private final MySqlConnectionConfiguration configuration;
+    private final LazyQueryCache queryCache;
 
-    private MySqlConnectionFactory(Mono<? extends MySqlConnection> client) {
-        this.client = client;
+    private MySqlConnectionFactory(MySqlConnectionConfiguration configuration) {
+        this.configuration = configuration;
+        this.queryCache = new LazyQueryCache(configuration.getQueryCacheSize());
     }
 
     @Override
     public Mono<? extends MySqlConnection> create() {
-        return client;
+        MySqlSslConfiguration ssl;
+        SocketAddress address;
+
+        if (configuration.isHost()) {
+            ssl = configuration.getSsl();
+            address = InetSocketAddress.createUnresolved(configuration.getDomain(),
+                    configuration.getPort());
+        } else {
+            ssl = MySqlSslConfiguration.disabled();
+            address = new DomainSocketAddress(configuration.getDomain());
+        }
+
+        String user = configuration.getUser();
+        CharSequence password = configuration.getPassword();
+        Publisher<String> passwordPublisher = configuration.getPasswordPublisher();
+
+        if (Objects.nonNull(passwordPublisher)) {
+            return Mono.from(passwordPublisher).flatMap(token -> getMySqlConnection(
+                    configuration, ssl,
+                    queryCache,
+                    address,
+                    user,
+                    token
+            ));
+        }
+
+        return getMySqlConnection(
+                configuration, ssl,
+                queryCache,
+                address,
+                user,
+                password
+        );
     }
 
     @Override
@@ -66,44 +100,7 @@ public final class MySqlConnectionFactory implements ConnectionFactory {
      */
     public static MySqlConnectionFactory from(MySqlConnectionConfiguration configuration) {
         requireNonNull(configuration, "configuration must not be null");
-
-        LazyQueryCache queryCache = new LazyQueryCache(configuration.getQueryCacheSize());
-
-        return new MySqlConnectionFactory(Mono.defer(() -> {
-            MySqlSslConfiguration ssl;
-            SocketAddress address;
-
-            if (configuration.isHost()) {
-                ssl = configuration.getSsl();
-                address = InetSocketAddress.createUnresolved(configuration.getDomain(),
-                    configuration.getPort());
-            } else {
-                ssl = MySqlSslConfiguration.disabled();
-                address = new DomainSocketAddress(configuration.getDomain());
-            }
-
-            String user = configuration.getUser();
-            CharSequence password = configuration.getPassword();
-            Publisher<String> passwordPublisher = configuration.getPasswordPublisher();
-
-            if (Objects.nonNull(passwordPublisher)) {
-                return Mono.from(passwordPublisher).flatMap(token -> getMySqlConnection(
-                    configuration, ssl,
-                    queryCache,
-                    address,
-                    user,
-                    token
-                ));
-            }
-
-            return getMySqlConnection(
-                configuration, ssl,
-                queryCache,
-                address,
-                user,
-                password
-            );
-        }));
+        return new MySqlConnectionFactory(configuration);
     }
 
     /**
