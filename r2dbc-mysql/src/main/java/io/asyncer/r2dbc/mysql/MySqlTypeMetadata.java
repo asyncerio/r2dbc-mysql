@@ -16,6 +16,10 @@
 
 package io.asyncer.r2dbc.mysql;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.Nullable;
+
 import io.asyncer.r2dbc.mysql.api.MySqlNativeTypeMetadata;
 import io.asyncer.r2dbc.mysql.collation.CharCollation;
 
@@ -65,10 +69,17 @@ final class MySqlTypeMetadata implements MySqlNativeTypeMetadata {
      */
     private final int collationId;
 
-    MySqlTypeMetadata(int typeId, int definitions, int collationId) {
+    /**
+     * The MariaDB extended type info field that provides more specific details about column type.
+     */
+    @Nullable
+    private final String extendedTypeInfo;
+
+    MySqlTypeMetadata(int typeId, int definitions, int collationId, @Nullable String extendedTypeInfo) {
         this.typeId = typeId;
         this.definitions = (short) (definitions & ALL_USED);
         this.collationId = collationId;
+        this.extendedTypeInfo = extendedTypeInfo;
     }
 
     @Override
@@ -107,6 +118,11 @@ final class MySqlTypeMetadata implements MySqlNativeTypeMetadata {
     }
 
     @Override
+    public boolean isMariaDbJson() {
+        return (extendedTypeInfo == null ? false : extendedTypeInfo.equals("json"));
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -117,13 +133,15 @@ final class MySqlTypeMetadata implements MySqlNativeTypeMetadata {
 
         MySqlTypeMetadata that = (MySqlTypeMetadata) o;
 
-        return typeId == that.typeId && definitions == that.definitions && collationId == that.collationId;
+        return typeId == that.typeId && definitions == that.definitions && collationId == that.collationId &&
+                   Objects.equals(extendedTypeInfo, that.extendedTypeInfo);
     }
 
     @Override
     public int hashCode() {
         int result = 31 * typeId + (int) definitions;
-        return 31 * result + collationId;
+        result = 31 * result + collationId;
+        return 31 * result + (extendedTypeInfo == null ? 0 : extendedTypeInfo.hashCode());
     }
 
     @Override
@@ -131,6 +149,7 @@ final class MySqlTypeMetadata implements MySqlNativeTypeMetadata {
         return "MySqlTypeMetadata{typeId=" + typeId +
             ", definitions=0x" + Integer.toHexString(definitions) +
             ", collationId=" + collationId +
-            '}';
+            ", extendedTypeInfo='" + extendedTypeInfo +
+            "'}";
     }
 }

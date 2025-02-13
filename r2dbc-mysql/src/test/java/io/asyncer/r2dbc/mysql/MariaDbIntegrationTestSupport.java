@@ -16,9 +16,17 @@
 
 package io.asyncer.r2dbc.mysql;
 
+import io.asyncer.r2dbc.mysql.api.MySqlColumnMetadata;
 import io.asyncer.r2dbc.mysql.api.MySqlConnection;
+import io.asyncer.r2dbc.mysql.api.MySqlRow;
+import io.asyncer.r2dbc.mysql.api.MySqlRowMetadata;
 import io.r2dbc.spi.Readable;
+import io.r2dbc.spi.Row;
+import io.r2dbc.spi.RowMetadata;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
@@ -141,6 +149,23 @@ abstract class MariaDbIntegrationTestSupport extends IntegrationTestSupport {
             .doOnNext(it -> assertThat(it).isEqualTo(2)));
     }
 
+    @Test
+    @EnabledIf("envIsMariaDb10_5_1")
+    void returningExtendedTypeInfoJson() {
+        complete(conn -> conn.createStatement("CREATE TEMPORARY TABLE test(" +
+            "id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, value JSON NOT NULL)")
+            .execute()
+            .flatMap(IntegrationTestSupport::extractRowsUpdated)
+            .thenMany(conn.createStatement("INSERT INTO test(value) VALUES (?)")
+                .bind(0, "{\"abc\": 123}")
+                .returnGeneratedValues()
+                .execute())
+            .flatMap(result -> result.map(DataEntity::readExtendedTypeInfoResult))
+            .collectList()
+            .doOnNext(list -> assertIfExtendedTypeInfoEnabled(conn, list))
+            );
+    }
+
     private static Mono<Void> assertWithSelectAll(MySqlConnection conn, Mono<List<DataEntity>> returning) {
         return returning.zipWhen(list -> conn.createStatement("SELECT * FROM test WHERE id IN (?,?,?,?,?)")
                 .bind(0, list.get(0).getId())
@@ -169,6 +194,15 @@ abstract class MariaDbIntegrationTestSupport extends IntegrationTestSupport {
                 .collectList())
             .doOnNext(list -> assertThat(list.getT1()).isEqualTo(list.getT2()))
             .then();
+    }
+
+    private static void assertIfExtendedTypeInfoEnabled(MySqlConnection conn, List<Boolean> list) {
+        boolean enabled = ((MySqlSimpleConnection)conn).context().getCapability().isExtendedTypeInfo();
+        if (enabled) {
+            assertThat(list.get(0)).isEqualTo(true);
+        } else {
+            assertThat(list.get(0)).isEqualTo(false);
+        }
     }
 
     private static final class DataEntity {
@@ -249,6 +283,12 @@ abstract class MariaDbIntegrationTestSupport extends IntegrationTestSupport {
             requireNonNull(value, "value must not be null");
 
             return new DataEntity(id, value, ZonedDateTime.ofInstant(Instant.EPOCH, ZoneOffset.UTC));
+        }
+
+        static Boolean readExtendedTypeInfoResult(Row row, RowMetadata rowMetadata) {
+            Boolean extendedTypeInfoResult = ((MySqlRowMetadata)rowMetadata)
+                .getColumnMetadata("value").getNativeTypeMetadata().isMariaDbJson();
+            return extendedTypeInfoResult;
         }
     }
 }

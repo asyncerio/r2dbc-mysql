@@ -56,7 +56,7 @@ class MySqlRowDescriptorTest {
         MySqlColumnDescriptor[] metadata = new MySqlColumnDescriptor[names.length];
         for (int i = 0; i < names.length; ++i) {
             metadata[i] =
-                    new MySqlColumnDescriptor(i, (short) 0, names[i], 0, 0, 0, 1);
+                    new MySqlColumnDescriptor(i, (short) 0, names[i], 0, 0, 0, 1, null);
         }
         return new MySqlRowDescriptor(metadata);
     }

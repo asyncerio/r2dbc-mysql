@@ -17,6 +17,8 @@
 package io.asyncer.r2dbc.mysql;
 
 import io.asyncer.r2dbc.mysql.collation.CharCollation;
+import io.asyncer.r2dbc.mysql.constant.MySqlType;
+
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,7 +30,7 @@ class MySqlTypeMetadataTest {
 
     @Test
     void allSet() {
-        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, -1, 0);
+        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, -1, 0, null);
 
         assertThat(metadata.isBinary()).isTrue();
         assertThat(metadata.isSet()).isTrue();
@@ -39,7 +41,7 @@ class MySqlTypeMetadataTest {
 
     @Test
     void noSet() {
-        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, 0, 0);
+        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, 0, 0, null);
 
         assertThat(metadata.isBinary()).isFalse();
         assertThat(metadata.isSet()).isFalse();
@@ -50,11 +52,24 @@ class MySqlTypeMetadataTest {
 
     @Test
     void isBinaryUsesCollationId() {
-        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, -1, CharCollation.BINARY_ID);
+        MySqlTypeMetadata metadata = new MySqlTypeMetadata(0, -1, CharCollation.BINARY_ID, null);
 
         assertThat(metadata.isBinary()).isTrue();
 
-        metadata = new MySqlTypeMetadata(0, -1, 33);
+        metadata = new MySqlTypeMetadata(0, -1, 33, null);
         assertThat(metadata.isBinary()).isFalse();
+    }
+    
+    @Test
+    void mariaDbJsonReturnsCorrectMySqlType() {
+    	MySqlTypeMetadata metadata = new MySqlTypeMetadata(254, 0, 0, "json");
+    	
+    	assertThat(metadata.isMariaDbJson()).isTrue();
+    	assertThat(MySqlType.of(metadata)).isEqualTo(MySqlType.JSON);
+    	
+    	metadata = new MySqlTypeMetadata(254, 0 ,0 , null);
+    	
+    	assertThat(metadata.isMariaDbJson()).isFalse();
+    	assertThat(MySqlType.of(metadata)).isEqualTo(MySqlType.VARCHAR);
     }
 }
